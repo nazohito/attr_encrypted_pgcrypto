@@ -23,7 +23,6 @@ module AttrEncryptedPgcrypto
     #   # or
     #   decrypted_value = AttrEncryptedPgcrypto::Encryptor.decrypt('some encrypted string', :key => 'some secret key')
     def decrypt(*args, &block)
-      p value(args)
       escape_and_execute_sql(["SELECT pgp_sym_decrypt(?, ?)",  ::ActiveRecord::Base.connection.escape_bytea(value(args)), key(args)])['pgp_sym_decrypt']
     end
 
