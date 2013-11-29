@@ -12,7 +12,7 @@ module AttrEncryptedPgcrypto
     #   # or
     #   encrypted_value = AttrEncryptedPgcrypto::Encryptor.encrypt('some string to encrypt', :key => 'some secret key')
     def encrypt(*args, &block)
-      ::ActiveRecord::Base.connection.unescape_bytea(escape_and_execute_sql(["SELECT pgp_sym_encrypt(?, ?)", value(args), key(args)])['pgp_sym_encrypt'])
+      ::ActiveRecord::Base.connection.unescape_bytea(escape_and_execute_sql(["SELECT encode(pgp_sym_encrypt(?::text, ?::text), 'escape') pgp_sym_encrypt", value(args), key(args)])['pgp_sym_encrypt'])
     end
 
     # Decrypts a <tt>:value</tt> with a specified <tt>:key</tt>
@@ -23,7 +23,7 @@ module AttrEncryptedPgcrypto
     #   # or
     #   decrypted_value = AttrEncryptedPgcrypto::Encryptor.decrypt('some encrypted string', :key => 'some secret key')
     def decrypt(*args, &block)
-      escape_and_execute_sql(["SELECT pgp_sym_decrypt(?, ?)",  ::ActiveRecord::Base.connection.escape_bytea(value(args)), key(args)])['pgp_sym_decrypt']
+      escape_and_execute_sql(["SELECT pgp_sym_decrypt(?::bytea, ?::text)",  ::ActiveRecord::Base.connection.escape_bytea(value(args)), key(args)])['pgp_sym_decrypt']
     end
 
     protected
@@ -41,8 +41,18 @@ module AttrEncryptedPgcrypto
     end
 
     def escape_and_execute_sql(query)
-      query = ::ActiveRecord::Base.send :sanitize_sql_array, query
-      ::ActiveRecord::Base.connection.execute(query).first
+#      query = ::ActiveRecord::Base.send :sanitize_sql_array, query
+#      ::ActiveRecord::Base.connection.execute(query).first
+
+       sql = query.shift
+       connection = ActiveRecord::Base.connection
+       sql.gsub!("?").with_index do |_,n|
+         connection.substitute_at nil,n
+       end
+       query.map! do |arg|
+         [nil,arg]
+       end
+       connection.exec_query(sql,"SQL",query).first
     end
   end
 end

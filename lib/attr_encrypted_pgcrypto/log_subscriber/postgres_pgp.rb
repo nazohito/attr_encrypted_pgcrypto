@@ -15,7 +15,7 @@ module AttrEncryptedPgcrypto
       # Public: Prevents sensitive data from being logged
       def sql_with_postgres_pgp(event)
         filter = /(pgp_sym_(encrypt|decrypt))\(((.|\n)*?)\)/i
-
+        event.payload[:binds] = [] if event.payload[:sql] =~ filter
         event.payload[:sql] = event.payload[:sql].gsub(filter) do |_|
           "#{$1}([FILTERED])"
         end
